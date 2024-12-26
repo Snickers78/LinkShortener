@@ -4,7 +4,6 @@ import (
 	"GoAdvanced/configs"
 	"GoAdvanced/pkg/req"
 	"GoAdvanced/pkg/res"
-	"fmt"
 	"net/http"
 )
 
@@ -32,7 +31,10 @@ func (handler *AuthHandler) Login() http.HandlerFunc {
 		if err != nil {
 			return
 		}
-		fmt.Println(body)
+		_, err = handler.AuthService.Login(body.Email, body.Password)
+		if err != nil {
+			panic(err)
+		}
 		resp := LoginResponce{
 			Token: "123",
 		}
