@@ -2,6 +2,7 @@ package auth
 
 import (
 	"GoAdvanced/configs"
+	"GoAdvanced/pkg/jwt"
 	"GoAdvanced/pkg/req"
 	"GoAdvanced/pkg/res"
 	"net/http"
@@ -31,12 +32,18 @@ func (handler *AuthHandler) Login() http.HandlerFunc {
 		if err != nil {
 			return
 		}
-		_, err = handler.AuthService.Login(body.Email, body.Password)
+		email, err := handler.AuthService.Login(body.Email, body.Password)
 		if err != nil {
-			panic(err)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		resp := LoginResponce{
-			Token: "123",
+			Token: token,
 		}
 		res.Json(w, http.StatusOK, resp)
 	}
@@ -48,7 +55,20 @@ func (handler *AuthHandler) Register() http.HandlerFunc {
 		if err != nil {
 			return
 		}
-		handler.AuthService.Register(body.Email, body.Password, body.Name)
+		email, err := handler.AuthService.Register(body.Email, body.Password, body.Name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		token, err := jwt.NewJWT(handler.Config.Auth.Secret).Create(email)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp := RegisterResponce{
+			Token: token,
+		}
+		res.Json(w, http.StatusOK, resp)
 	}
 
 }
