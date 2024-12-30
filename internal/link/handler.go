@@ -1,8 +1,11 @@
 package link
 
 import (
+	"GoAdvanced/configs"
+	"GoAdvanced/pkg/middleware"
 	"GoAdvanced/pkg/req"
 	"GoAdvanced/pkg/res"
+	"fmt"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
@@ -10,6 +13,7 @@ import (
 
 type LinkHandlerDeps struct {
 	LinkRepository *LinkRepository
+	Config         *configs.Config
 }
 
 type LinkHandler struct {
@@ -22,7 +26,7 @@ func NewLinkHandler(router *http.ServeMux, Deps LinkHandlerDeps) {
 	}
 	router.HandleFunc("POST /link", handler.Create())
 	router.HandleFunc("GET /{hash}", handler.GoTo())
-	router.HandleFunc("PATCH /link/{id}", handler.Update())
+	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), Deps.Config))
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
 }
 
@@ -79,6 +83,11 @@ func (handler *LinkHandler) Update() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
+		val, ok := r.Context().Value(middleware.ContextKeyEmail).(string)
+		if ok {
+			fmt.Println(val)
+		}
+
 		res.Json(w, http.StatusCreated, link)
 	}
 }
