@@ -2,6 +2,7 @@ package link
 
 import (
 	"GoAdvanced/configs"
+	"GoAdvanced/pkg/event"
 	"GoAdvanced/pkg/middleware"
 	"GoAdvanced/pkg/req"
 	"GoAdvanced/pkg/res"
@@ -14,20 +15,24 @@ import (
 type LinkHandlerDeps struct {
 	LinkRepository *LinkRepository
 	Config         *configs.Config
+	EventBus       *event.EventBus
 }
 
 type LinkHandler struct {
 	LinkRepository *LinkRepository
+	EventBus       *event.EventBus
 }
 
 func NewLinkHandler(router *http.ServeMux, Deps LinkHandlerDeps) {
 	handler := &LinkHandler{
 		LinkRepository: Deps.LinkRepository,
+		EventBus:       Deps.EventBus,
 	}
 	router.HandleFunc("POST /link", handler.Create())
 	router.HandleFunc("GET /{hash}", handler.GoTo())
 	router.Handle("PATCH /link/{id}", middleware.IsAuthed(handler.Update(), Deps.Config))
 	router.HandleFunc("DELETE /link/{id}", handler.Delete())
+	router.Handle("GET /link", middleware.IsAuthed(handler.GetAll(), Deps.Config))
 }
 
 func (handler *LinkHandler) Create() http.HandlerFunc {
@@ -60,6 +65,10 @@ func (handler *LinkHandler) GoTo() http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		}
+		go handler.EventBus.Publish(event.Event{
+			Type: event.EventLinkVisited,
+			Data: link.ID,
+		})
 		http.Redirect(w, r, link.Url, http.StatusTemporaryRedirect)
 	}
 }
@@ -108,5 +117,22 @@ func (handler *LinkHandler) Delete() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		res.Json(w, http.StatusNoContent, nil)
+	}
+}
+
+func (handler *LinkHandler) GetAll() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+		if err != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+		}
+		offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+		if err != nil {
+			http.Error(w, "invalid offset", http.StatusBadRequest)
+		}
+		res.Json(w, http.StatusOK, GetAllLinks{
+			Links: handler.LinkRepository.GetLinks(limit, offset),
+			Count: handler.LinkRepository.Count(),
+		})
 	}
 }

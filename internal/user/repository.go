@@ -3,10 +3,10 @@ package user
 import "GoAdvanced/pkg/db"
 
 type UserRepository struct {
-	Database db.Db
+	Database *db.Db
 }
 
-func NewUserRepository(database db.Db) *UserRepository {
+func NewUserRepository(database *db.Db) *UserRepository {
 	return &UserRepository{
 		Database: database,
 	}
