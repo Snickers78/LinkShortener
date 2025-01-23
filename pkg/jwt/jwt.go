@@ -28,7 +28,7 @@ func (j *JWT) Create(data JWTData) (string, error) {
 }
 
 func (j *JWT) Parse(token string) (bool, *JWTData) {
-	t, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	t, err := jwt.Parse(token, func(token *jwt.Token) (any, error) {
 		return []byte(j.Secret), nil
 	})
 	if err != nil {
